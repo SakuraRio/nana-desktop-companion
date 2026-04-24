@@ -1,0 +1,148 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e5]: LUCINIA
+    - generic [ref=e7]: 主人，今天也要一起加油鸭~ ✨
+    - generic: ⋮⋮
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: 12:11
+      - generic [ref=e12]: 2026.04.24 · FRI
+    - generic: ⋮⋮
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: 上海市
+        - generic [ref=e17]: ⛅
+      - generic [ref=e18]: 22°C
+      - generic [ref=e19]: 多云 · 体感 20°
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - text: 💧 65%
+          - generic [ref=e22]: 湿度
+        - generic [ref=e23]:
+          - text: 🌬 12km/h
+          - generic [ref=e24]: 风速
+        - generic [ref=e25]:
+          - text: 👁 8km
+          - generic [ref=e26]: 能见度
+    - generic: ⋮⋮
+  - generic [ref=e27]:
+    - generic [ref=e28]:
+      - generic [ref=e29]: ♪
+      - generic [ref=e30]:
+        - generic [ref=e31]: One Last Time
+        - generic [ref=e32]: Ariana Grande
+    - generic [ref=e34]:
+      - generic [ref=e35]: 0:00
+      - text: /
+      - generic [ref=e36]: 0:00
+    - generic [ref=e37]:
+      - button "⏮" [ref=e38] [cursor=pointer]
+      - button "▶" [ref=e39] [cursor=pointer]
+      - button "⏭" [ref=e40] [cursor=pointer]
+    - generic: ⋮⋮
+  - generic [ref=e41]:
+    - generic [ref=e42]:
+      - generic [ref=e43]: 📋 今日日程
+      - generic [ref=e44]: 3 件
+    - list [ref=e45]:
+      - listitem [ref=e46]:
+        - generic "点击换色 · 双击切换完成" [ref=e47] [cursor=pointer]
+        - generic "点击编辑" [ref=e48]: 晨会 · Nana 桌宠进度同步
+        - generic "点击修改时间" [ref=e49]: 09:30
+        - generic "删除" [ref=e50] [cursor=pointer]: ✕
+      - listitem [ref=e51]:
+        - generic "点击换色 · 双击切换完成" [ref=e52] [cursor=pointer]
+        - generic "点击编辑" [ref=e53]: Watch 压力监控联调
+        - generic "点击修改时间" [ref=e54]: 14:00
+        - generic "删除" [ref=e55] [cursor=pointer]: ✕
+      - listitem [ref=e56]:
+        - generic "点击换色 · 双击切换完成" [ref=e57] [cursor=pointer]
+        - generic "点击编辑" [ref=e58]: 灵动岛交互评审
+        - generic "点击修改时间" [ref=e59]: 16:30
+        - generic "删除" [ref=e60] [cursor=pointer]: ✕
+    - button "＋ 添加" [ref=e61] [cursor=pointer]
+    - generic: ⋮⋮
+  - generic "工具" [ref=e62] [cursor=pointer]:
+    - generic [ref=e63]: ＋
+  - generic:
+    - button "↩"
+    - button "🖼️"
+    - button "☀️"
+    - button "👤"
+    - button "🎤"
+    - button "⌨️"
+    - generic:
+      - generic: 隐藏的组件
+      - generic:
+        - generic: 所有组件都在 ✨
+    - generic:
+      - generic "鹿希尼亚"
+      - generic "耶梦加"
+      - generic "莉可"
+      - generic "芽早"
+      - generic "娜娜"
+  - generic:
+    - generic:
+      - generic: 选择视频
+      - button "✕"
+  - generic:
+    - generic:
+      - generic:
+        - generic: 🎤
+      - generic:
+        - generic:
+          - text: 按住
+          - generic: 空格
+          - text: 说话
+        - text: 💖
+      - button "✕"
+      - generic:
+        - generic:
+          - button "🔊"
+          - generic: 音色
+          - generic: 鹿希尼亚
+          - button "🤖 AI 开":
+            - generic: 🤖
+            - generic: AI 开
+  - generic:
+    - generic:
+      - generic: 选择角色
+      - button "✕"
+    - generic:
+      - generic "鹿希尼亚":
+        - generic: 鹿希尼亚
+        - text: ✓
+      - generic "耶梦加":
+        - generic: 耶梦加
+      - generic "莉可":
+        - generic: 莉可
+      - generic "芽早":
+        - generic: 芽早
+      - generic "娜娜":
+        - generic: 娜娜
+      - generic "把新立绘放到 assets/characters/ 后在代码里加配置就能出现在这里": ＋
+    - generic: 点击头像切换 · 支持拖动位置
+  - generic:
+    - generic:
+      - generic:
+        - generic: 🤖 AI 对接设置
+        - button "✕"
+      - generic:
+        - generic: API Key（DeepSeek）
+        - generic:
+          - textbox "sk-..."
+          - button "👁"
+        - generic: API 地址（可选，留空用默认）
+        - textbox "https://api.deepseek.com"
+        - generic: 模型选择
+        - generic:
+          - generic:
+            - radio "deepseek-chat" [checked]
+            - text: deepseek-chat
+          - generic:
+            - radio "reasoner"
+            - text: reasoner
+        - generic:
+          - button "💾 保存并测试"
+          - button "清除"

@@ -2756,8 +2756,13 @@
     /* 横向滑动遮罩 */
     mask-image: linear-gradient(to right, transparent 2%, black 5%, black 95%, transparent 98%);
     -webkit-mask-image: linear-gradient(to right, transparent 2%, black 5%, black 95%, transparent 98%);
+    cursor: grab;
   }
   .cp-grid::-webkit-scrollbar { display: none; }
+  .cp-grid.dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+  }
   .cp-grid > * { flex-shrink: 0; scroll-snap-align: center; }
   .cp-item {
     position: relative;
@@ -2863,16 +2868,25 @@
     pointer-events: none;
     transition: opacity 0.28s, transform 0.35s cubic-bezier(.2,.8,.2,1);
     z-index: 49;
-    /* 横向滑动容器：限制宽度强制溢出滚动 */
-    max-width: 200px;
+    /* 横向滑动容器：宽度限制显示 4~5 个，溢出可滑动 */
+    max-width: 280px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox 隐藏滚动条 */
     /* 遮罩：左右边缘渐隐提示可滑动 */
-    mask-image: linear-gradient(to right, transparent 4%, black 12%, black 88%, transparent 96%);
-    -webkit-mask-image: linear-gradient(to right, transparent 4%, black 12%, black 88%, transparent 96%);
+    mask-image: linear-gradient(to right, transparent 3%, black 10%, black 90%, transparent 97%);
+    -webkit-mask-image: linear-gradient(to right, transparent 3%, black 10%, black 90%, transparent 97%);
+    /* 拖拽滚动光标 */
+    cursor: grab;
+  }
+  .char-flyout.open {
+    cursor: grab;
+  }
+  .char-flyout.dragging {
+    cursor: grabbing;
+    scroll-snap-type: none; /* 拖拽时取消吸附 */
   }
   .char-flyout::-webkit-scrollbar { display: none; } /* Safari/Chrome 隐藏滚动条 */
   body.video-mode .char-flyout {
@@ -3043,11 +3057,18 @@
 
   /* 视频选择面板：稍微宽一点，视频缩略图有动画 */
   .char-picker.video-picker {
-    width: 320px;
+    width: 340px;
     bottom: 28px;
   }
   .char-picker.video-picker .cp-grid {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    gap: 10px;
+    /* 覆盖默认的 grid 布局，改为横向滑动 */
+  }
+  .char-picker.video-picker .cp-item {
+    width: 120px;
+    aspect-ratio: auto;
+    height: 85px;
   }
   .vp-thumb-wrap {
     position: absolute;
@@ -6547,6 +6568,50 @@ const Characters = (() => {
   }
   function toggle() { picker.classList.contains('open') ? close() : open(); }
 
+  // 通用：给横向滚动容器添加拖拽滑动支持
+  function makeDragScrollable(el, itemW) {
+    if (!el) return;
+    let dsX = 0, dsL = 0, dragging = false;
+    const gap = 12; /* cp-grid gap */
+    el.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || e.target.closest('.cp-item')) return;
+      dragging = true; dsX = e.pageX; dsL = el.scrollLeft;
+      el.classList.add('dragging');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      el.scrollLeft = dsL - (e.pageX - dsX);
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('dragging');
+      const snap = itemW + gap;
+      el.scrollTo({ left: Math.round(el.scrollLeft / snap) * snap, behavior: 'smooth' });
+    });
+    // touch
+    let tsX = 0, tsL = 0;
+    el.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.cp-item')) return;
+      tsX = e.touches[0].pageX; tsL = el.scrollLeft;
+    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      if (!tsX) return;
+      el.scrollLeft = tsL - (e.touches[0].pageX - tsX);
+      if (!e.target.closest('.cp-item')) e.preventDefault();
+    }, { passive: false });
+    el.addEventListener('touchend', () => {
+      if (!tsX) return;
+      tsX = 0;
+      const snap = itemW + gap;
+      el.scrollTo({ left: Math.round(el.scrollLeft / snap) * snap, behavior: 'smooth' });
+    });
+  }
+  makeDragScrollable(grid, 90);   /* 角色面板卡片宽度 */
+  /* 视频面板也绑定（vpGrid 在 DOM 中可能延迟渲染） */
+  setTimeout(() => makeDragScrollable(document.getElementById('vpGrid'), 120), 100);
+
   // 初始化
   apply(currentId, false);
 
@@ -6694,6 +6759,57 @@ const CharRail = (() => {
 
   // 初次预渲染（不展开）
   safeRender();
+
+  // ====== 拖拽滑动支持（鼠标按住左右拖动滚动） ======
+  let _dragStartX = 0, _dragScrollL = 0, _isDragging = false;
+  rail.addEventListener('mousedown', (e) => {
+    // 只响应左键，且不拦截点击头像
+    if (e.button !== 0 || e.target.closest('.cr-item')) return;
+    _isDragging = true;
+    _dragStartX = e.pageX;
+    _dragScrollL = rail.scrollLeft;
+    rail.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!_isDragging) return;
+    const dx = e.pageX - _dragStartX;
+    rail.scrollLeft = _dragScrollL - dx;
+  });
+  document.addEventListener('mouseup', () => {
+    if (!_isDragging) return;
+    _isDragging = false;
+    rail.classList.remove('dragging');
+    // 惯性吸附：松手后对齐到最近的 item
+    const snapW = 52 + 8; /* item width + gap */
+    const target = Math.round(rail.scrollLeft / snapW) * snapW;
+    rail.scrollTo({ left: target, behavior: 'smooth' });
+  });
+
+  // 触摸设备支持
+  let _touchStartX = 0, _touchScrollL = 0;
+  rail.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.cr-item')) return;
+    _touchStartX = e.touches[0].pageX;
+    _touchScrollL = rail.scrollLeft;
+  }, { passive: true });
+  rail.addEventListener('touchmove', (e) => {
+    if (_touchStartX === 0) return;
+    const dx = e.touches[0].pageX - _touchStartX;
+    if (Math.abs(dx) > 3) {
+      rail.scrollLeft = _touchScrollL - dx;
+      // 阻止页面滚动
+      if (!e.target.closest('.cr-item')) e.preventDefault();
+    }
+  }, { passive: false });
+  rail.addEventListener('touchend', () => {
+    if (_touchStartX === 0) return;
+    _touchStartX = 0;
+    const snapW = 52 + 8;
+    const target = Math.round(rail.scrollLeft / snapW) * snapW;
+    rail.scrollTo({ left: target, behavior: 'smooth' });
+  });
+
   return { render, open, close, toggle };
 })();
 
