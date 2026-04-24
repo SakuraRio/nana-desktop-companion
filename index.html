@@ -2744,13 +2744,24 @@
     transform: rotate(90deg);
   }
   .cp-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    display: flex;
+    gap: 12px;
     margin-bottom: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    /* 横向滑动遮罩 */
+    mask-image: linear-gradient(to right, transparent 2%, black 5%, black 95%, transparent 98%);
+    -webkit-mask-image: linear-gradient(to right, transparent 2%, black 5%, black 95%, transparent 98%);
   }
+  .cp-grid::-webkit-scrollbar { display: none; }
+  .cp-grid > * { flex-shrink: 0; scroll-snap-align: center; }
   .cp-item {
     position: relative;
+    width: 90px;
     aspect-ratio: 1;
     border-radius: 14px;
     border: 2px solid rgba(255,255,255,0.7);
@@ -2841,7 +2852,7 @@
     transform-origin: right center;
     display: flex;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(22px) saturate(1.4);
     -webkit-backdrop-filter: blur(22px) saturate(1.4);
@@ -2852,8 +2863,17 @@
     pointer-events: none;
     transition: opacity 0.28s, transform 0.35s cubic-bezier(.2,.8,.2,1);
     z-index: 49;
-    white-space: nowrap;
+    /* 横向滑动容器 */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox 隐藏滚动条 */
+    /* 遮罩：左右边缘渐隐提示可滑动 */
+    mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
   }
+  .char-flyout::-webkit-scrollbar { display: none; } /* Safari/Chrome 隐藏滚动条 */
   body.video-mode .char-flyout {
     background: rgba(20, 22, 32, 0.55);
     border-color: rgba(255, 255, 255, 0.18);
@@ -2866,8 +2886,10 @@
   /* 头像 */
   .cr-item {
     position: relative;
-    width: 38px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    scroll-snap-align: center;
     border-radius: 12px;
     border: 2px solid rgba(255,255,255,0.6);
     overflow: hidden;
