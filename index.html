@@ -2863,15 +2863,16 @@
     pointer-events: none;
     transition: opacity 0.28s, transform 0.35s cubic-bezier(.2,.8,.2,1);
     z-index: 49;
-    /* 横向滑动容器 */
+    /* 横向滑动容器：限制宽度强制溢出滚动 */
+    max-width: 200px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox 隐藏滚动条 */
     /* 遮罩：左右边缘渐隐提示可滑动 */
-    mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 4%, black 12%, black 88%, transparent 96%);
+    -webkit-mask-image: linear-gradient(to right, transparent 4%, black 12%, black 88%, transparent 96%);
   }
   .char-flyout::-webkit-scrollbar { display: none; } /* Safari/Chrome 隐藏滚动条 */
   body.video-mode .char-flyout {
@@ -2886,8 +2887,8 @@
   /* 头像 */
   .cr-item {
     position: relative;
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     flex-shrink: 0;
     scroll-snap-align: center;
     border-radius: 12px;
