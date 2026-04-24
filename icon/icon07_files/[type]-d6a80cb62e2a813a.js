@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[7374],{16356:(_,e,n)=>{"use strict";n.r(e),n.d(e,{default:()=>s});let s=n(15638).default},75518:(_,e,n)=>{(window.__NEXT_P=window.__NEXT_P||[]).push(["/pins/[pinId]/similar/[type]",function(){return n(16356)}])}},_=>{_.O(0,[2912,7250,6291,8902,1871,7459,5260,4172,636,6593,8792],()=>_(_.s=75518)),_N_E=_.O()}]);

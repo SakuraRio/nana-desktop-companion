@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[8822],{20617:(_,n,e)=>{(window.__NEXT_P=window.__NEXT_P||[]).push(["/discovery",function(){return e(88282)}])}},_=>{_.O(0,[2912,7250,6291,8902,1871,7459,9629,3213,7357,2134,636,6593,8792],()=>_(_.s=20617)),_N_E=_.O()}]);
