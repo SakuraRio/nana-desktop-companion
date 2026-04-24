@@ -2855,8 +2855,6 @@
     top: 50%;
     transform: translateY(-50%) translateX(10px) scale(0.9);
     transform-origin: right center;
-    display: flex;
-    gap: 8px;
     padding: 10px 12px;
     background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(22px) saturate(1.4);
@@ -2868,13 +2866,12 @@
     pointer-events: none;
     transition: opacity 0.28s, transform 0.35s cubic-bezier(.2,.8,.2,1);
     z-index: 49;
-    /* 横向滑动容器：宽度限制显示 4~5 个，溢出可滑动 */
-    max-width: 280px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox 隐藏滚动条 */
+    /* JS 虚拟滚动：固定宽度 + 裁剪溢出 */
+    width: 255px;
+    max-width: 255px;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     /* 遮罩：左右边缘渐隐提示可滑动 */
     mask-image: linear-gradient(to right, transparent 3%, black 10%, black 90%, transparent 97%);
     -webkit-mask-image: linear-gradient(to right, transparent 3%, black 10%, black 90%, transparent 97%);
@@ -2886,9 +2883,7 @@
   }
   .char-flyout.dragging {
     cursor: grabbing;
-    scroll-snap-type: none; /* 拖拽时取消吸附 */
   }
-  .char-flyout::-webkit-scrollbar { display: none; } /* Safari/Chrome 隐藏滚动条 */
   body.video-mode .char-flyout {
     background: rgba(20, 22, 32, 0.55);
     border-color: rgba(255, 255, 255, 0.18);
@@ -2898,6 +2893,17 @@
     transform: translateY(-50%) translateX(0) scale(1);
     pointer-events: auto;
   }
+  /* 内部滑轨（用 transform 做虚拟滚动） */
+  .char-flyout-inner {
+    display: flex;
+    gap: 8px;
+    will-change: transform;
+    transition: transform 0.2s ease-out;
+  }
+  .char-flyout.dragging .char-flyout-inner {
+    transition: none;
+  }
+
   /* 头像 */
   .cr-item {
     position: relative;
@@ -2914,6 +2920,7 @@
                 border-color 0.25s,
                 box-shadow 0.25s;
     flex-shrink: 0;
+    box-sizing: border-box; /* border 包含在 52px 内 */
   }
   .cr-item::after {
     content: "";
@@ -6504,6 +6511,8 @@ const Characters = (() => {
       if (typeof speak === 'function' && introText) {
         console.log('[char] 准备播放自我介绍:', introText.slice(0,30));
         setTimeout(() => {
+          // 先停掉上一条未播完的语音，再播放新的
+          if (typeof stopAudio === 'function') stopAudio();
           console.log('[char] 调用 speak(force=true)...');
           speak(introText, true);
         }, 1000);
@@ -6649,16 +6658,49 @@ const CharRail = (() => {
 
   let isOpen = false;
 
+  // ====== 虚拟滚动状态 ======
+  let _offset = 0;              // 当前偏移量（像素，正值 = 向左滚）
+  let _dragStartX = 0;
+  let _dragStartOff = 0;
+  let _isDragging = false;
+  let _hasDragged = false;
+  const ITEM_W = 52;            // 单个 item 宽度
+  const GAP = 8;               // 间隔
+  const STEP = ITEM_W + GAP;    // 每步滚动距离
+
+  // 内部滑轨元素（动态创建一次）
+  let _inner = rail.querySelector('.char-flyout-inner');
+  if (!_inner) {
+    _inner = document.createElement('div');
+    _inner.className = 'char-flyout-inner';
+    rail.appendChild(_inner);
+  }
+
+  /** 应用当前偏移量到内部滑轨 */
+  function _applyOffset(animate) {
+    if (!_inner) return;
+    const maxOffset = Math.max(0, _inner.scrollWidth - rail.clientWidth + 24); /* +24 padding补偿 */
+    _offset = Math.max(0, Math.min(_offset, maxOffset)); // clamp
+    if (animate) {
+      _inner.style.transition = 'transform 0.25s cubic-bezier(.2,.8,.2,1)';
+    } else {
+      _inner.style.transition = 'none';
+    }
+    _inner.style.transform = `translateX(-${_offset}px)`;
+  }
+
   function render() {
+    // 拖拽中跳过重绘
+    if (_isDragging) return;
+
     const current = Characters.current();
     const videoOn = (typeof VideoMode !== 'undefined' && VideoMode.isEnabled && VideoMode.isEnabled());
     const vidList = (typeof VideoMode !== 'undefined' && VideoMode.list) ? VideoMode.list : [];
     const curVideoId = (typeof VideoMode !== 'undefined' && VideoMode.current) ? VideoMode.current() : '';
 
     if (videoOn) {
-      // 视频模式：显示所有角色视频缩略图（含"默认占位"跳过）
       const vids = vidList.filter(v => v.id !== 'default');
-      rail.innerHTML = vids.map(v => {
+      _inner.innerHTML = vids.map(v => {
         const linkedChar = Characters.list.find(c => c.id === v.relatedChar);
         const label = linkedChar ? linkedChar.zhName : v.name;
         return `
@@ -6673,8 +6715,7 @@ const CharRail = (() => {
           </div>`;
       }).join('');
     } else {
-      // 立绘模式：显示所有有立绘的角色（过滤 videoOnly）
-      rail.innerHTML = Characters.list.filter(c => !c.videoOnly).map(c => `
+      _inner.innerHTML = Characters.list.filter(c => !c.videoOnly).map(c => `
         <div class="cr-item ${c.id === current ? 'active' : ''}"
              data-char-id="${c.id}"
              style="--cr-img: url('${c.file}')"
@@ -6683,30 +6724,24 @@ const CharRail = (() => {
     }
 
     // 绑定点击
-    rail.querySelectorAll('.cr-item[data-char-id]').forEach(el => {
+    _inner.querySelectorAll('.cr-item[data-char-id]').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         if (videoOn) {
-          // 视频模式：切视频（顺带同步角色人设）
           const vidId = el.dataset.videoId;
           const charId = el.dataset.charId;
-          if (vidId && VideoMode.setVideo) {
-            VideoMode.setVideo(vidId);
-          }
-          // 如果这个视频有关联角色，顺便切角色（但不触发视频再次切换，否则循环）
-          if (charId && charId !== Characters.current()) {
-            Characters.apply(charId, true);
-          }
+          if (vidId && VideoMode.setVideo) VideoMode.setVideo(vidId);
+          if (charId && charId !== Characters.current()) Characters.apply(charId, true);
         } else {
-          // 立绘模式：切角色
           const id = el.dataset.charId;
-          if (id && id !== Characters.current()) {
-            Characters.apply(id, true);
-          }
+          if (id && id !== Characters.current()) Characters.apply(id, true);
         }
         render();
       });
     });
+
+    // 重绘后重新 clamp 偏移量并应用（内容数量可能变了）
+    _applyOffset(false);
   }
 
   function open() {
@@ -6722,7 +6757,7 @@ const CharRail = (() => {
   }
   function toggle() { isOpen ? close() : open(); }
 
-  // 接管 🎭 按钮点击（之前在 Characters 模块里绑了 toggle picker 面板，这里优先）
+  // 接管 🎭 按钮点击
   triggerBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -6760,54 +6795,62 @@ const CharRail = (() => {
   // 初次预渲染（不展开）
   safeRender();
 
-  // ====== 拖拽滑动支持（鼠标按住左右拖动滚动） ======
-  let _dragStartX = 0, _dragScrollL = 0, _isDragging = false;
+  // ====== 虚拟滚动：鼠标拖拽 ======
   rail.addEventListener('mousedown', (e) => {
-    // 只响应左键，且不拦截点击头像
-    if (e.button !== 0 || e.target.closest('.cr-item')) return;
+    if (e.button !== 0) return;
     _isDragging = true;
+    _hasDragged = false;
     _dragStartX = e.pageX;
-    _dragScrollL = rail.scrollLeft;
+    _dragStartOff = _offset;
     rail.classList.add('dragging');
+    document.body.style.userSelect = 'none';
     e.preventDefault();
   });
   document.addEventListener('mousemove', (e) => {
     if (!_isDragging) return;
     const dx = e.pageX - _dragStartX;
-    rail.scrollLeft = _dragScrollL - dx;
+    if (!_hasDragged && Math.abs(dx) < 5) return; // 阈值内允许点击
+    if (!_hasDragged) { _hasDragged = true; }
+    _offset = _dragStartOff - dx;
+    _applyOffset(false);
   });
   document.addEventListener('mouseup', () => {
     if (!_isDragging) return;
     _isDragging = false;
+    document.body.style.userSelect = '';
     rail.classList.remove('dragging');
-    // 惯性吸附：松手后对齐到最近的 item
-    const snapW = 52 + 8; /* item width + gap */
-    const target = Math.round(rail.scrollLeft / snapW) * snapW;
-    rail.scrollTo({ left: target, behavior: 'smooth' });
+    if (_hasDragged) {
+      // 吸附到最近的 item
+      _offset = Math.round(_offset / STEP) * STEP;
+      _applyOffset(true);
+    }
+    _hasDragged = false;
   });
 
-  // 触摸设备支持
-  let _touchStartX = 0, _touchScrollL = 0;
+  // ====== 虚拟滚动：触控板/鼠标滚轮 ======
+  rail.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    _offset += e.deltaX + e.deltaY;
+    _applyOffset(true);
+  }, { passive: false });
+
+  // ====== 虚拟滚动：触摸设备 ======
+  let _touchStartX = 0, _touchStartOff = 0;
   rail.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.cr-item')) return;
     _touchStartX = e.touches[0].pageX;
-    _touchScrollL = rail.scrollLeft;
+    _touchStartOff = _offset;
   }, { passive: true });
   rail.addEventListener('touchmove', (e) => {
-    if (_touchStartX === 0) return;
     const dx = e.touches[0].pageX - _touchStartX;
     if (Math.abs(dx) > 3) {
-      rail.scrollLeft = _touchScrollL - dx;
-      // 阻止页面滚动
-      if (!e.target.closest('.cr-item')) e.preventDefault();
+      _offset = _touchStartOff - dx;
+      _applyOffset(false);
+      e.preventDefault();
     }
   }, { passive: false });
   rail.addEventListener('touchend', () => {
-    if (_touchStartX === 0) return;
-    _touchStartX = 0;
-    const snapW = 52 + 8;
-    const target = Math.round(rail.scrollLeft / snapW) * snapW;
-    rail.scrollTo({ left: target, behavior: 'smooth' });
+    _offset = Math.round(_offset / STEP) * STEP;
+    _applyOffset(true);
   });
 
   return { render, open, close, toggle };
